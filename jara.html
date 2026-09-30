@@ -1,0 +1,421 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastel Heart</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #fff4b8;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let width;
+let height;
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+}
+
+resize();
+
+window.addEventListener("resize", resize);
+
+
+// ========================================
+// PENGATURAN
+// ========================================
+
+const PARTICLE_COUNT = 3500;
+const J_PARTICLES = 600;
+
+const particles = [];
+const heartTargets = [];
+
+
+// ========================================
+// BACKGROUND BUBBLE
+// ========================================
+
+const bubbles = [];
+
+for (let i = 0; i < 35; i++) {
+
+    bubbles.push({
+        x: Math.random(),
+        y: Math.random(),
+        size: Math.random() * 35 + 15,
+        speed: Math.random() * 0.0004 + 0.0002,
+        alpha: Math.random() * 0.18 + 0.08
+    });
+}
+
+
+// ========================================
+// BENTUK LOVE
+// ========================================
+
+for (let i = 0; i < PARTICLE_COUNT - J_PARTICLES; i++) {
+
+    const t =
+        Math.random() * Math.PI * 2;
+
+    const x =
+        16 * Math.pow(Math.sin(t), 3);
+
+    const y =
+        13 * Math.cos(t)
+        - 5 * Math.cos(2 * t)
+        - 2 * Math.cos(3 * t)
+        - Math.cos(4 * t);
+
+    const scale = 18;
+
+    heartTargets.push({
+        x: x * scale,
+        y: -y * scale
+    });
+}
+
+
+// ========================================
+// MEMBUAT HURUF J DARI PIXEL
+// ========================================
+
+const textCanvas =
+    document.createElement("canvas");
+
+const textCtx =
+    textCanvas.getContext("2d");
+
+textCanvas.width = 300;
+textCanvas.height = 300;
+
+textCtx.fillStyle = "white";
+textCtx.font = "bold 220px Arial";
+textCtx.textAlign = "center";
+textCtx.textBaseline = "middle";
+
+textCtx.fillText(
+    "J",
+    150,
+    145
+);
+
+const imageData =
+    textCtx.getImageData(
+        0,
+        0,
+        300,
+        300
+    );
+
+const jTargets = [];
+
+for (let y = 0; y < 300; y += 3) {
+
+    for (let x = 0; x < 300; x += 3) {
+
+        const index =
+            (y * 300 + x) * 4;
+
+        const alpha =
+            imageData.data[index + 3];
+
+        if (alpha > 100) {
+
+            jTargets.push({
+                x: (x - 150) * 0.55,
+                y: (y - 150) * 0.55
+            });
+        }
+    }
+}
+
+
+// ========================================
+// PARTICLES
+// ========================================
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+
+    let target;
+    let isJ = false;
+
+    if (
+        i >= PARTICLE_COUNT - J_PARTICLES &&
+        jTargets.length > 0
+    ) {
+
+        target =
+            jTargets[
+                Math.floor(
+                    Math.random() *
+                    jTargets.length
+                )
+            ];
+
+        isJ = true;
+
+    } else {
+
+        target =
+            heartTargets[
+                i %
+                heartTargets.length
+            ];
+    }
+
+    particles.push({
+
+        x: Math.random() * width,
+        y: Math.random() * height,
+
+        targetX: target.x,
+        targetY: target.y,
+
+        isJ: isJ,
+
+        size:
+            Math.random() * 2.5 + 0.7,
+
+        speed:
+            Math.random() * 0.025 + 0.015,
+
+        angle:
+            Math.random() *
+            Math.PI * 2,
+
+        alpha:
+            Math.random() * 0.5 + 0.5
+    });
+}
+
+
+// ========================================
+// ANIMASI
+// ========================================
+
+let time = 0;
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    time += 0.02;
+
+
+    // Background pastel
+    ctx.fillStyle = "#fff4b8";
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    // ====================================
+    // BUBBLE BACKGROUND
+    // ====================================
+
+    for (const bubble of bubbles) {
+
+        bubble.y -= bubble.speed;
+
+        if (bubble.y < -0.1) {
+            bubble.y = 1.1;
+            bubble.x = Math.random();
+        }
+
+        const x =
+            bubble.x * width;
+
+        const y =
+            bubble.y * height;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x,
+            y,
+            bubble.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            `rgba(255,255,255,${bubble.alpha})`;
+
+        ctx.fill();
+    }
+
+
+    const centerX =
+        width / 2;
+
+    const centerY =
+        height / 2 + 20;
+
+
+    // Denyut love
+    const pulse =
+        1 +
+        Math.sin(time * 3) * 0.07;
+
+
+    // ====================================
+    // PARTICLES
+    // ====================================
+
+    for (const p of particles) {
+
+        const targetX =
+            centerX +
+            p.targetX * pulse;
+
+        const targetY =
+            centerY +
+            p.targetY * pulse;
+
+
+        p.x +=
+            (targetX - p.x) *
+            p.speed;
+
+        p.y +=
+            (targetY - p.y) *
+            p.speed;
+
+
+        const floatingX =
+            Math.sin(
+                time * 2 +
+                p.angle
+            ) * 0.7;
+
+        const floatingY =
+            Math.cos(
+                time * 2 +
+                p.angle
+            ) * 0.7;
+
+
+        // =================================
+        // GLOW
+        // =================================
+
+        const glow =
+            ctx.createRadialGradient(
+                p.x,
+                p.y,
+                0,
+                p.x,
+                p.y,
+                9
+            );
+
+
+        if (p.isJ) {
+
+            glow.addColorStop(
+                0,
+                `rgba(255,255,255,${p.alpha})`
+            );
+
+            glow.addColorStop(
+                1,
+                "rgba(255,255,255,0)"
+            );
+
+        } else {
+
+            glow.addColorStop(
+                0,
+                `rgba(255,220,90,${p.alpha})`
+            );
+
+            glow.addColorStop(
+                1,
+                "rgba(255,210,70,0)"
+            );
+        }
+
+
+        ctx.fillStyle = glow;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x + floatingX,
+            p.y + floatingY,
+            p.isJ ? 6 : 5,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+
+        // =================================
+        // PARTICLE UTAMA
+        // =================================
+
+        if (p.isJ) {
+
+            ctx.fillStyle =
+                `rgba(255,255,255,${p.alpha})`;
+
+        } else {
+
+            ctx.fillStyle =
+                `rgba(255,218,90,${p.alpha})`;
+        }
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            p.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+    }
+}
+
+animate();
+
+</script>
+
+</body>
+</html>
+```
